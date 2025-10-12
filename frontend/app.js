@@ -1,6 +1,6 @@
 
 
-// Import Three.js modules (ES6 modules)
+// Import Three.js modules
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -9,121 +9,292 @@ const recordButton = document.getElementById("recordButton");
 const status = document.getElementById("status");
 const transcript = document.getElementById("transcript");
 const loading = document.getElementById("loading");
+const signLabel = document.getElementById("signLabel");
 
 let mediaRecorder;
 let audioChunks = [];
 let avatar = null;
 let mixer = null;
 let currentAction = null;
+let bodyParts = {};
 
 // Three.js scene setup
 const container = document.getElementById("avatar-container");
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1e3c72);
+scene.background = new THREE.Color(0x2a5298);
 
 const camera = new THREE.PerspectiveCamera(
-  75,
+  50,
   container.clientWidth / container.clientHeight,
   0.1,
   1000
 );
-camera.position.set(0, 1.6, 3);
-camera.lookAt(0, 1, 0);
+camera.position.set(0, 1.5, 4);
+camera.lookAt(0, 1.2, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(container.clientWidth, container.clientHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
 container.appendChild(renderer.domElement);
 
-// Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+// Enhanced Lighting for better visibility
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-directionalLight.position.set(5, 10, 5);
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(3, 5, 3);
+directionalLight.castShadow = true;
 scene.add(directionalLight);
 
-const pointLight = new THREE.PointLight(0x667eea, 1, 100);
-pointLight.position.set(-5, 5, 5);
-scene.add(pointLight);
+const frontLight = new THREE.DirectionalLight(0xffffff, 0.6);
+frontLight.position.set(0, 2, 5);
+scene.add(frontLight);
 
-// Load avatar with better error handling
-const loader = new GLTFLoader();
+const backLight = new THREE.DirectionalLight(0x8899ff, 0.4);
+backLight.position.set(0, 2, -3);
+scene.add(backLight);
 
-// Check if avatar file exists first
-fetch("./avatar.glb", { method: 'HEAD' })
-  .then(response => {
-    if (response.ok) {
-      // File exists, try to load it
-      loader.load(
-        "./avatar.glb",
-        (gltf) => {
-          avatar = gltf.scene;
-          avatar.position.set(0, 0, 0);
-          avatar.scale.set(1, 1, 1);
-          scene.add(avatar);
-          
-          // Setup animation mixer if animations exist
-          if (gltf.animations && gltf.animations.length > 0) {
-            mixer = new THREE.AnimationMixer(avatar);
-            console.log("Animations found:", gltf.animations.length);
-          }
-          
-          status.textContent = "Avatar loaded! Ready to record.";
-          console.log("Avatar loaded successfully");
-        },
-        (progress) => {
-          const percent = (progress.loaded / progress.total * 100).toFixed(0);
-          status.textContent = `Loading avatar... ${percent}%`;
-        },
-        (error) => {
-          console.error("Error loading avatar:", error);
-          console.warn("Avatar file might be in wrong format (needs .glb, not .fbx)");
-          status.textContent = "Using simple avatar (GLB file format issue).";
-          createFallbackAvatar();
-        }
-      );
-    } else {
-      throw new Error("Avatar file not found");
-    }
-  })
-  .catch(error => {
-    console.warn("Avatar file not found or inaccessible, using fallback");
-    status.textContent = "Using simple avatar (no GLB file found).";
-    createFallbackAvatar();
+// Create improved 3D avatar with visible arms and hands
+function createImprovedAvatar() {
+  const avatarGroup = new THREE.Group();
+  
+  // Materials
+  const skinMaterial = new THREE.MeshPhongMaterial({ 
+    color: 0xffdbac,
+    shininess: 20,
+    flatShading: false
   });
-
-// Create fallback avatar if GLB fails to load
-function createFallbackAvatar() {
-  const geometry = new THREE.BoxGeometry(0.5, 0.8, 0.3);
-  const material = new THREE.MeshPhongMaterial({ color: 0x4a90e2 });
-  avatar = new THREE.Mesh(geometry, material);
-  avatar.position.set(0, 1, 0);
-  scene.add(avatar);
   
-  // Add a head
-  const headGeometry = new THREE.SphereGeometry(0.25, 32, 32);
-  const headMaterial = new THREE.MeshPhongMaterial({ color: 0xffdbac });
-  const head = new THREE.Mesh(headGeometry, headMaterial);
-  head.position.set(0, 0.65, 0);
-  avatar.add(head);
+  const shirtMaterial = new THREE.MeshPhongMaterial({ 
+    color: 0x4a90e2,
+    shininess: 30
+  });
   
-  console.log("Fallback avatar created");
+  const pantsMaterial = new THREE.MeshPhongMaterial({ 
+    color: 0x2c3e50,
+    shininess: 20
+  });
+  
+  // HEAD - Larger and more visible
+  const headGeometry = new THREE.SphereGeometry(0.35, 32, 32);
+  const head = new THREE.Mesh(headGeometry, skinMaterial);
+  head.position.set(0, 1.65, 0);
+  head.castShadow = true;
+  avatarGroup.add(head);
+  bodyParts.head = head;
+  
+  // EYES - More prominent
+  const eyeGeometry = new THREE.SphereGeometry(0.06, 16, 16);
+  const eyeMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
+  
+  const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+  leftEye.position.set(-0.12, 1.7, 0.28);
+  avatarGroup.add(leftEye);
+  
+  const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+  rightEye.position.set(0.12, 1.7, 0.28);
+  avatarGroup.add(rightEye);
+  
+  // SMILE - Visible
+  const smileCurve = new THREE.EllipseCurve(0, 0, 0.12, 0.08, 0, Math.PI, false);
+  const smilePoints = smileCurve.getPoints(20);
+  const smileGeometry = new THREE.BufferGeometry().setFromPoints(smilePoints);
+  const smileMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 });
+  const smile = new THREE.Line(smileGeometry, smileMaterial);
+  smile.position.set(0, 1.55, 0.32);
+  avatarGroup.add(smile);
+  
+  // NECK
+  const neckGeometry = new THREE.CylinderGeometry(0.12, 0.15, 0.2, 16);
+  const neck = new THREE.Mesh(neckGeometry, skinMaterial);
+  neck.position.set(0, 1.35, 0);
+  avatarGroup.add(neck);
+  
+  // TORSO - Upper body
+  const torsoGeometry = new THREE.CylinderGeometry(0.25, 0.3, 0.6, 16);
+  const torso = new THREE.Mesh(torsoGeometry, shirtMaterial);
+  torso.position.set(0, 1.0, 0);
+  torso.castShadow = true;
+  avatarGroup.add(torso);
+  bodyParts.body = torso;
+  
+  // WAIST
+  const waistGeometry = new THREE.CylinderGeometry(0.3, 0.28, 0.3, 16);
+  const waist = new THREE.Mesh(waistGeometry, pantsMaterial);
+  waist.position.set(0, 0.55, 0);
+  avatarGroup.add(waist);
+  
+  // LEGS - Simple
+  const legGeometry = new THREE.CylinderGeometry(0.1, 0.09, 0.5, 16);
+  const legMaterial = new THREE.MeshPhongMaterial({ color: 0x34495e });
+  
+  const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+  leftLeg.position.set(-0.15, 0.15, 0);
+  avatarGroup.add(leftLeg);
+  
+  const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+  rightLeg.position.set(0.15, 0.15, 0);
+  avatarGroup.add(rightLeg);
+  
+  // ===== RIGHT ARM - IMPROVED VISIBILITY =====
+  const rightShoulder = new THREE.Group();
+  rightShoulder.position.set(0.35, 1.15, 0);
+  avatarGroup.add(rightShoulder);
+  bodyParts.rightShoulder = rightShoulder;
+  
+  // Upper Right Arm
+  const upperArmGeometry = new THREE.CylinderGeometry(0.09, 0.08, 0.45, 16);
+  const rightUpperArm = new THREE.Mesh(upperArmGeometry, skinMaterial);
+  rightUpperArm.position.set(0, -0.225, 0);
+  rightUpperArm.rotation.z = 0.2;
+  rightUpperArm.castShadow = true;
+  rightShoulder.add(rightUpperArm);
+  bodyParts.rightUpperArm = rightUpperArm;
+  
+  // Right Elbow (joint)
+  const elbowGeometry = new THREE.SphereGeometry(0.09, 16, 16);
+  const rightElbow = new THREE.Mesh(elbowGeometry, skinMaterial);
+  rightElbow.position.set(0, -0.45, 0);
+  rightShoulder.add(rightElbow);
+  
+  // Lower Right Arm Group
+  const rightForearmGroup = new THREE.Group();
+  rightForearmGroup.position.set(0, -0.45, 0);
+  rightShoulder.add(rightForearmGroup);
+  bodyParts.rightForearmGroup = rightForearmGroup;
+  
+  // Lower Right Arm
+  const lowerArmGeometry = new THREE.CylinderGeometry(0.08, 0.07, 0.4, 16);
+  const rightForearm = new THREE.Mesh(lowerArmGeometry, skinMaterial);
+  rightForearm.position.set(0, -0.2, 0);
+  rightForearm.castShadow = true;
+  rightForearmGroup.add(rightForearm);
+  bodyParts.rightForearm = rightForearm;
+  
+  // RIGHT HAND - Large and visible
+  const rightHandGroup = new THREE.Group();
+  rightHandGroup.position.set(0, -0.4, 0);
+  rightForearmGroup.add(rightHandGroup);
+  bodyParts.rightHand = rightHandGroup;
+  
+  // Hand palm
+  const handGeometry = new THREE.BoxGeometry(0.15, 0.18, 0.08);
+  const rightHandPalm = new THREE.Mesh(handGeometry, skinMaterial);
+  rightHandPalm.castShadow = true;
+  rightHandGroup.add(rightHandPalm);
+  
+  // Fingers
+  const fingerGeometry = new THREE.CylinderGeometry(0.02, 0.015, 0.12, 8);
+  const fingerPositions = [
+    [-0.05, 0.12, 0.02],  // Index
+    [-0.02, 0.14, 0.02],  // Middle
+    [0.02, 0.13, 0.02],   // Ring
+    [0.05, 0.11, 0.02],   // Pinky
+    [-0.06, 0.02, 0.03]   // Thumb
+  ];
+  
+  fingerPositions.forEach(pos => {
+    const finger = new THREE.Mesh(fingerGeometry, skinMaterial);
+    finger.position.set(pos[0], pos[1], pos[2]);
+    finger.rotation.z = pos[0] * 0.3;
+    rightHandGroup.add(finger);
+  });
+  
+  // ===== LEFT ARM - IMPROVED VISIBILITY =====
+  const leftShoulder = new THREE.Group();
+  leftShoulder.position.set(-0.35, 1.15, 0);
+  avatarGroup.add(leftShoulder);
+  bodyParts.leftShoulder = leftShoulder;
+  
+  // Upper Left Arm
+  const leftUpperArm = new THREE.Mesh(upperArmGeometry, skinMaterial);
+  leftUpperArm.position.set(0, -0.225, 0);
+  leftUpperArm.rotation.z = -0.2;
+  leftUpperArm.castShadow = true;
+  leftShoulder.add(leftUpperArm);
+  bodyParts.leftUpperArm = leftUpperArm;
+  
+  // Left Elbow
+  const leftElbow = new THREE.Mesh(elbowGeometry, skinMaterial);
+  leftElbow.position.set(0, -0.45, 0);
+  leftShoulder.add(leftElbow);
+  
+  // Lower Left Arm Group
+  const leftForearmGroup = new THREE.Group();
+  leftForearmGroup.position.set(0, -0.45, 0);
+  leftShoulder.add(leftForearmGroup);
+  bodyParts.leftForearmGroup = leftForearmGroup;
+  
+  // Lower Left Arm
+  const leftForearm = new THREE.Mesh(lowerArmGeometry, skinMaterial);
+  leftForearm.position.set(0, -0.2, 0);
+  leftForearm.castShadow = true;
+  leftForearmGroup.add(leftForearm);
+  bodyParts.leftForearm = leftForearm;
+  
+  // LEFT HAND - Large and visible
+  const leftHandGroup = new THREE.Group();
+  leftHandGroup.position.set(0, -0.4, 0);
+  leftForearmGroup.add(leftHandGroup);
+  bodyParts.leftHand = leftHandGroup;
+  
+  // Hand palm
+  const leftHandPalm = new THREE.Mesh(handGeometry, skinMaterial);
+  leftHandPalm.castShadow = true;
+  leftHandGroup.add(leftHandPalm);
+  
+  // Fingers
+  fingerPositions.forEach(pos => {
+    const finger = new THREE.Mesh(fingerGeometry, skinMaterial);
+    finger.position.set(-pos[0], pos[1], pos[2]);
+    finger.rotation.z = -pos[0] * 0.3;
+    leftHandGroup.add(finger);
+  });
+  
+  // Position avatar
+  avatarGroup.position.set(0, 0, 0);
+  scene.add(avatarGroup);
+  avatar = avatarGroup;
+  
+  console.log("✅ Improved avatar with visible arms and hands created!");
+  return avatarGroup;
 }
 
-// Animation loop
+// Initialize avatar
+createImprovedAvatar();
+
+// Animation loop with idle animation
 const clock = new THREE.Clock();
 function animate() {
   requestAnimationFrame(animate);
   
   const delta = clock.getDelta();
+  const time = clock.getElapsedTime();
+  
   if (mixer) {
     mixer.update(delta);
   }
   
-  // Gentle idle rotation
+  // Idle animation - gentle breathing and subtle movements
   if (avatar && !currentAction) {
-    avatar.rotation.y += 0.002;
+    if (bodyParts.body) {
+      bodyParts.body.scale.y = 1 + Math.sin(time * 1.5) * 0.02;
+    }
+    
+    // Subtle head movement
+    if (bodyParts.head) {
+      bodyParts.head.rotation.y = Math.sin(time * 0.5) * 0.05;
+      bodyParts.head.rotation.x = Math.sin(time * 0.3) * 0.02;
+    }
+    
+    // Gentle arm sway
+    if (bodyParts.rightShoulder) {
+      bodyParts.rightShoulder.rotation.z = 0.2 + Math.sin(time * 0.8) * 0.03;
+    }
+    if (bodyParts.leftShoulder) {
+      bodyParts.leftShoulder.rotation.z = -0.2 + Math.sin(time * 0.8 + Math.PI) * 0.03;
+    }
   }
   
   renderer.render(scene, camera);
@@ -140,12 +311,10 @@ window.addEventListener('resize', () => {
 // Recording functionality
 recordButton.addEventListener("click", async () => {
   if (mediaRecorder && mediaRecorder.state === "recording") {
-    // Stop recording
     mediaRecorder.stop();
     recordButton.textContent = "🎙️ Start Recording";
     recordButton.classList.remove("recording");
   } else {
-    // Start recording
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder = new MediaRecorder(stream);
@@ -154,10 +323,11 @@ recordButton.addEventListener("click", async () => {
       mediaRecorder.start();
       recordButton.textContent = "⏹️ Stop Recording";
       recordButton.classList.add("recording");
-      status.textContent = "Listening... Speak now!";
+      status.textContent = "🎤 Listening... Speak now!";
       status.classList.remove("error", "success");
       transcript.textContent = "";
       loading.classList.remove("active");
+      signLabel.classList.remove("active");
 
       mediaRecorder.addEventListener("dataavailable", (e) => {
         audioChunks.push(e.data);
@@ -166,23 +336,21 @@ recordButton.addEventListener("click", async () => {
       mediaRecorder.addEventListener("stop", async () => {
         const audioBlob = new Blob(audioChunks, { type: "audio/wav" });
         await sendAudioToBackend(audioBlob);
-        
-        // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
       });
 
     } catch (err) {
       console.error("Microphone error:", err);
-      status.textContent = "Error: Cannot access microphone. Please allow microphone access.";
+      status.textContent = "❌ Error: Cannot access microphone. Please allow microphone access.";
       status.classList.add("error");
       recordButton.classList.remove("recording");
     }
   }
 });
 
-// Send audio to backend with better error handling
+// Send audio to backend
 async function sendAudioToBackend(audioBlob) {
-  status.textContent = "Processing your speech...";
+  status.textContent = "⏳ Processing your speech...";
   loading.classList.add("active");
   
   const formData = new FormData();
@@ -204,33 +372,38 @@ async function sendAudioToBackend(audioBlob) {
     }
 
     const data = await response.json();
-    console.log("Backend response:", data);
+    console.log("✅ Backend response:", data);
     
     loading.classList.remove("active");
     
     if (data.transcript) {
-      status.textContent = "Translation complete!";
+      status.textContent = "✅ Translation complete!";
       status.classList.add("success");
       transcript.textContent = `You said: "${data.transcript}"`;
       
+      // Show sign label
+      signLabel.textContent = `🤟 ${data.gloss}`;
+      signLabel.classList.add("active");
+      
       // Play sign animation
       playSignAnimation(data.gloss);
+      
+      // Hide label after animation
+      setTimeout(() => {
+        signLabel.classList.remove("active");
+      }, 3500);
     } else {
-      status.textContent = "No speech detected. Please try again.";
+      status.textContent = "⚠️ No speech detected. Please try again.";
       status.classList.add("error");
     }
 
   } catch (err) {
-    console.error("Backend error:", err);
+    console.error("❌ Backend error:", err);
     loading.classList.remove("active");
     
-    // More specific error messages
     if (err.message.includes('Failed to fetch')) {
-      status.textContent = "❌ Cannot connect to backend. Is Flask running on port 5000?";
-      transcript.textContent = "Start backend with: cd backend && python app.py";
-    } else if (err.message.includes('NetworkError')) {
-      status.textContent = "❌ Network error. Check if Flask server is running.";
-      transcript.textContent = "Run: cd backend && python app.py";
+      status.textContent = "❌ Cannot connect to backend. Is Flask running?";
+      transcript.textContent = "Start backend: cd backend && python app.py";
     } else {
       status.textContent = `❌ Error: ${err.message}`;
       transcript.textContent = "Check console (F12) for details";
@@ -240,229 +413,192 @@ async function sendAudioToBackend(audioBlob) {
   }
 }
 
-// Sign language animation definitions
+// Enhanced sign language animations with visible movements
 const SIGN_ANIMATIONS = {
   'HELLO': {
     name: 'Hello',
-    duration: 2000,
-    movements: [
-      { joint: 'rightArm', axis: 'y', angle: Math.PI / 3, time: 0 },
-      { joint: 'rightHand', axis: 'z', angle: Math.PI / 4, time: 500 },
-      { joint: 'rightHand', axis: 'z', angle: -Math.PI / 4, time: 1000 },
-      { joint: 'rightHand', axis: 'z', angle: 0, time: 1500 }
-    ]
+    duration: 2200,
+    animate: (progress) => {
+      const wave = Math.sin(progress * Math.PI * 4) * 0.4;
+      
+      bodyParts.rightShoulder.rotation.z = -1.2;
+      bodyParts.rightShoulder.rotation.x = 0.3;
+      bodyParts.rightForearmGroup.rotation.z = -0.5 + wave;
+      bodyParts.rightHand.rotation.z = wave * 0.5;
+      bodyParts.head.rotation.y = Math.sin(progress * Math.PI * 2) * 0.15;
+    }
   },
   'THANK-YOU': {
     name: 'Thank You',
     duration: 2500,
-    movements: [
-      { joint: 'rightArm', axis: 'x', angle: -Math.PI / 4, time: 0 },
-      { joint: 'head', axis: 'x', angle: Math.PI / 6, time: 500 },
-      { joint: 'rightArm', axis: 'y', angle: Math.PI / 6, time: 1000 },
-      { joint: 'head', axis: 'x', angle: 0, time: 2000 }
-    ]
+    animate: (progress) => {
+      const phase = progress * Math.PI;
+      
+      bodyParts.rightShoulder.rotation.z = -1.0;
+      bodyParts.rightShoulder.rotation.x = -0.5 + Math.sin(phase) * 0.4;
+      bodyParts.rightForearmGroup.rotation.z = -0.3;
+      bodyParts.rightHand.position.z = Math.max(0, (progress - 0.3) * 0.8);
+      bodyParts.head.rotation.x = Math.sin(phase) * 0.25;
+      bodyParts.body.rotation.x = Math.sin(phase) * 0.1;
+    }
   },
   'PLEASE': {
     name: 'Please',
     duration: 2000,
-    movements: [
-      { joint: 'rightArm', axis: 'x', angle: -Math.PI / 3, time: 0 },
-      { joint: 'body', axis: 'x', angle: Math.PI / 12, time: 500 },
-      { joint: 'body', axis: 'x', angle: -Math.PI / 12, time: 1000 },
-      { joint: 'body', axis: 'x', angle: 0, time: 1500 }
-    ]
+    animate: (progress) => {
+      const rub = Math.sin(progress * Math.PI * 3) * 0.2;
+      
+      bodyParts.rightShoulder.rotation.z = -0.8;
+      bodyParts.rightShoulder.rotation.x = -0.4;
+      bodyParts.rightHand.position.x = rub;
+      bodyParts.body.rotation.x = rub * 0.5;
+    }
   },
   'YES': {
     name: 'Yes',
-    duration: 1500,
-    movements: [
-      { joint: 'head', axis: 'x', angle: Math.PI / 4, time: 0 },
-      { joint: 'head', axis: 'x', angle: -Math.PI / 6, time: 500 },
-      { joint: 'head', axis: 'x', angle: 0, time: 1000 }
-    ]
+    duration: 1600,
+    animate: (progress) => {
+      const nod = Math.sin(progress * Math.PI * 3) * 0.4;
+      bodyParts.head.rotation.x = nod;
+      bodyParts.rightShoulder.rotation.z = -0.6 + Math.abs(nod) * 0.2;
+      bodyParts.rightHand.rotation.x = nod * 0.5;
+    }
   },
   'NO': {
     name: 'No',
-    duration: 1500,
-    movements: [
-      { joint: 'head', axis: 'y', angle: Math.PI / 4, time: 0 },
-      { joint: 'head', axis: 'y', angle: -Math.PI / 4, time: 500 },
-      { joint: 'head', axis: 'y', angle: 0, time: 1000 }
-    ]
+    duration: 1600,
+    animate: (progress) => {
+      const shake = Math.sin(progress * Math.PI * 3) * 0.5;
+      bodyParts.head.rotation.y = shake;
+      bodyParts.rightShoulder.rotation.z = -0.6;
+      bodyParts.rightHand.rotation.y = shake * 0.3;
+    }
   },
   'HOW': {
     name: 'How',
     duration: 2000,
-    movements: [
-      { joint: 'rightArm', axis: 'z', angle: Math.PI / 3, time: 0 },
-      { joint: 'leftArm', axis: 'z', angle: -Math.PI / 3, time: 0 },
-      { joint: 'rightHand', axis: 'y', angle: Math.PI / 6, time: 500 }
-    ]
+    animate: (progress) => {
+      const twist = Math.sin(progress * Math.PI) * 0.4;
+      
+      bodyParts.rightShoulder.rotation.z = -1.0;
+      bodyParts.leftShoulder.rotation.z = 1.0;
+      bodyParts.rightForearmGroup.rotation.x = twist;
+      bodyParts.leftForearmGroup.rotation.x = -twist;
+      bodyParts.rightHand.rotation.y = twist;
+      bodyParts.leftHand.rotation.y = -twist;
+    }
+  },
+  'GOOD': {
+    name: 'Good',
+    duration: 2000,
+    animate: (progress) => {
+      const thumbsUp = Math.min(progress * 2, 1);
+      
+      bodyParts.rightShoulder.rotation.z = -1.2 * thumbsUp;
+      bodyParts.rightShoulder.rotation.x = -0.3 * thumbsUp;
+      bodyParts.rightForearmGroup.rotation.z = -0.4 * thumbsUp;
+      bodyParts.rightHand.rotation.x = 0.5 * thumbsUp;
+      bodyParts.head.rotation.y = -0.2 * thumbsUp;
+    }
+  },
+  'SORRY': {
+    name: 'Sorry',
+    duration: 2200,
+    animate: (progress) => {
+      const circular = Math.sin(progress * Math.PI * 2) * 0.3;
+      
+      bodyParts.rightShoulder.rotation.z = -0.8;
+      bodyParts.rightShoulder.rotation.x = -0.5;
+      bodyParts.rightHand.position.x = circular;
+      bodyParts.rightHand.position.y = -0.4 + Math.abs(circular) * 0.2;
+      bodyParts.head.rotation.x = 0.3;
+      bodyParts.body.rotation.x = 0.15;
+    }
   }
 };
 
 // Play sign animation
 function playSignAnimation(gloss) {
-  if (!avatar) {
-    console.warn("Avatar not loaded yet!");
+  if (!avatar || !bodyParts) {
+    console.warn("⚠️ Avatar not ready");
     return;
   }
 
-  console.log("Playing sign animation for:", gloss);
+  const signAnim = SIGN_ANIMATIONS[gloss] || SIGN_ANIMATIONS['HELLO'];
+  console.log(`🤟 Performing sign: ${signAnim.name}`);
   
-  // Stop any current animation
-  if (currentAction) {
-    currentAction.stop();
-    currentAction = null;
-  }
-
-  // If avatar has pre-recorded animations from GLB
-  if (mixer && mixer._actions && mixer._actions.length > 0) {
-    const action = mixer._actions.find(a => 
-      a._clip.name.toLowerCase().includes(gloss.toLowerCase())
-    );
-    
-    if (action) {
-      currentAction = action;
-      action.reset();
-      action.setLoop(THREE.LoopOnce);
-      action.clampWhenFinished = true;
-      action.play();
-      
-      setTimeout(() => {
-        currentAction = null;
-      }, action._clip.duration * 1000);
-      
-      return;
-    }
-  }
-
-  // Use procedural sign animation
-  const signAnim = SIGN_ANIMATIONS[gloss];
-  
-  if (signAnim) {
-    performSignAnimation(signAnim);
-  } else {
-    // Fallback: Generic wave animation
-    performGenericAnimation(gloss);
-  }
-}
-
-// Perform procedural sign language animation
-function performSignAnimation(animData) {
-  console.log(`🤟 Performing sign: ${animData.name}`);
-  
-  const startTime = Date.now();
-  const duration = animData.duration;
-  
-  // Store original rotations
-  const originalRotations = {};
-  
-  function animate() {
-    const elapsed = Date.now() - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    
-    if (progress < 1) {
-      // Apply each movement
-      animData.movements.forEach(movement => {
-        const moveProgress = Math.max(0, Math.min(1, (elapsed - movement.time) / 500));
-        if (moveProgress > 0 && moveProgress < 1) {
-          applyMovement(movement, moveProgress);
-        }
-      });
-      
-      requestAnimationFrame(animate);
-    } else {
-      // Reset to original position
-      resetAvatar();
-    }
-  }
-  
-  animate();
-}
-
-// Apply movement to avatar part
-function applyMovement(movement, progress) {
-  if (!avatar) return;
-  
-  // Ease in-out
-  const eased = progress < 0.5
-    ? 2 * progress * progress
-    : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-  
-  // Find the part to move (simplified for basic avatar)
-  let part = avatar;
-  
-  // Try to find specific body parts if they exist
-  avatar.traverse((child) => {
-    if (child.name && child.name.toLowerCase().includes(movement.joint.toLowerCase())) {
-      part = child;
-    }
+  // Store original poses
+  const originalPoses = {};
+  Object.keys(bodyParts).forEach(key => {
+    const part = bodyParts[key];
+    originalPoses[key] = {
+      rotation: part.rotation.clone(),
+      position: part.position.clone()
+    };
   });
   
-  // Apply rotation
-  if (movement.axis === 'x') {
-    part.rotation.x = movement.angle * eased;
-  } else if (movement.axis === 'y') {
-    part.rotation.y = movement.angle * eased;
-  } else if (movement.axis === 'z') {
-    part.rotation.z = movement.angle * eased;
+  const startTime = Date.now();
+  currentAction = true;
+  
+  function animateSign() {
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / signAnim.duration, 1);
+    const eased = easeInOutCubic(progress);
+    
+    if (progress < 1) {
+      signAnim.animate(eased);
+      requestAnimationFrame(animateSign);
+    } else {
+      resetToIdle(originalPoses);
+    }
   }
+  
+  animateSign();
 }
 
-// Reset avatar to neutral position
-function resetAvatar() {
-  if (!avatar) return;
-  
-  const duration = 500;
+// Reset to idle pose
+function resetToIdle(originalPoses) {
+  const duration = 600;
   const startTime = Date.now();
   
   function reset() {
     const elapsed = Date.now() - startTime;
     const progress = Math.min(elapsed / duration, 1);
+    const eased = easeInOutCubic(progress);
     
-    avatar.traverse((child) => {
-      if (child.rotation) {
-        child.rotation.x *= (1 - progress);
-        child.rotation.y *= (1 - progress);
-        child.rotation.z *= (1 - progress);
-      }
+    Object.keys(originalPoses).forEach(key => {
+      const part = bodyParts[key];
+      const original = originalPoses[key];
+      
+      part.rotation.x = lerp(part.rotation.x, original.rotation.x, eased);
+      part.rotation.y = lerp(part.rotation.y, original.rotation.y, eased);
+      part.rotation.z = lerp(part.rotation.z, original.rotation.z, eased);
+      
+      part.position.x = lerp(part.position.x, original.position.x, eased);
+      part.position.y = lerp(part.position.y, original.position.y, eased);
+      part.position.z = lerp(part.position.z, original.position.z, eased);
     });
     
     if (progress < 1) {
       requestAnimationFrame(reset);
+    } else {
+      currentAction = null;
+      console.log("✅ Animation complete - back to idle");
     }
   }
   
   reset();
 }
 
-// Generic animation for unknown signs
-function performGenericAnimation(gloss) {
-  console.log(`🤷 Using generic animation for: ${gloss}`);
-  
-  const duration = 2000;
-  const startTime = Date.now();
-  const startRotation = avatar.rotation.y;
-  
-  function animate() {
-    const elapsed = Date.now() - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    
-    if (progress < 1) {
-      // Wave motion
-      avatar.rotation.y = startRotation + Math.sin(progress * Math.PI * 3) * 0.3;
-      avatar.rotation.x = Math.sin(progress * Math.PI * 2) * 0.1;
-      requestAnimationFrame(animate);
-    } else {
-      avatar.rotation.y = startRotation;
-      avatar.rotation.x = 0;
-    }
-  }
-  
-  animate();
+// Utility functions
+function lerp(start, end, t) {
+  return start + (end - start) * t;
 }
 
-// Add visual feedback for supported words
-console.log("Voice to Sign Translator loaded!");
-console.log("Supported words: hello, thank you, please, yes, no, how, are, I, am, fine");
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+console.log("✅ Voice to Sign Translator loaded!");
+console.log("🤟 Supported signs:", Object.keys(SIGN_ANIMATIONS).join(", "));
+console.log("👋 Avatar ready with visible arms and hands!");
