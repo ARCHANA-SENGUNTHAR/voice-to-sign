@@ -2,18 +2,6 @@
 
 A project that translates voice input into sign language, featuring separate backend and frontend components.
 
-## Table of Contents
-
-- [Project Overview](#project-overview)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Setup Instructions](#setup-instructions)
-  - [Backend](#backend)
-  - [Frontend](#frontend)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-
 ---
 
 ## Project Overview
@@ -21,6 +9,8 @@ A project that translates voice input into sign language, featuring separate bac
 This project aims to convert spoken language into sign language using a combination of speech recognition, processing, and visualization technologies. It is organized into two main parts:
 - **Backend:** Handles the logic for speech processing and translation.
 - **Frontend:** Provides the user interface for interacting with the system.
+
+---
 
 ## Project Structure
 
@@ -33,6 +23,8 @@ voice-to-sign/
 - `backend/`: Contains server-side code for processing audio and translating it to sign language.
 - `frontend/`: Contains client-side code for user interaction and sign language visualization.
 
+---
+
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) (for frontend or backend if using JavaScript/Node)
@@ -40,6 +32,8 @@ voice-to-sign/
 - [pip](https://pip.pypa.io/en/stable/) (for Python dependencies)
 - [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/) (for frontend dependencies)
 - (Check specific package managers or requirements in the respective directories)
+
+---
 
 ## Setup Instructions
 
@@ -99,13 +93,10 @@ voice-to-sign/
 
 4. By default, the frontend runs on `http://localhost:3000` or a similar port.
 
+---
 ## Usage
 
 1. Ensure both backend and frontend servers are running.
 2. Open the frontend URL in your browser.
 3. Use the UI to record or upload your voice input.
 4. View the sign language translation in real time.
-
----
-
-**Note:** Please refer to the individual `backend` and `frontend` directories for more detailed documentation, environment variables, or configuration options.
