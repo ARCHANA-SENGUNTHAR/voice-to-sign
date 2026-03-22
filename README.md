@@ -100,3 +100,16 @@ voice-to-sign/
 2. Open the frontend URL in your browser.
 3. Use the UI to record or upload your voice input.
 4. View the sign language translation in real time.
+
+---
+## 📬 Contact
+
+ **Archana Sengunthar**
+ 
+  📧 Email: [ARCHANA GURUSAMY](mailto:archanagurusamy648@gmail.com)  
+  🔗 GitHub: [ARCHANA GURUSAMY](https://github.com/ARCHANA-SENGUNTHAR)
+
+**Deepika S**
+
+  📧 Email: [Deepika Selvaraj](mailto:studiesfor456@gmail.com)  
+  🔗 GitHub: [Deepika Selvaraj](https://github.com/Deepikasel)
